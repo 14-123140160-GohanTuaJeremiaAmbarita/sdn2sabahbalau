@@ -1,0 +1,314 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { BiArrowBack, BiCheckCircle, BiXCircle } from "react-icons/bi";
+import { createClient } from "@supabase/supabase-js";
+
+const quizQuestions = [
+  {
+    question: "1. A person who works in a school and teaches students is a...",
+    options: ["Pilot", "Teacher", "Chef"],
+    correctAnswer: "Teacher",
+  },
+  {
+    question: "2. The job of a 'Doctor' is to ... sick people.",
+    options: ["teach", "treat", "build"],
+    correctAnswer: "treat",
+  },
+  {
+    question: "3. 'Pilot' is a person who flies an ...",
+    options: ["Car", "Boat", "Airplane"],
+    correctAnswer: "Airplane",
+  },
+  {
+    question: "4. The profession that uses a fire truck is a...",
+    options: ["Policeman", "Firefighter", "Mechanic"],
+    correctAnswer: "Firefighter",
+  },
+  {
+    question: "5. I want ... a scientist.",
+    options: ["be", "to is", "to be"],
+    correctAnswer: "to be",
+  },
+  {
+    question: "6. 'Farmer' in Indonesian means...",
+    options: ["Nelayan", "Petani", "Pedagang"],
+    correctAnswer: "Petani",
+  },
+  {
+    question: "7. A: 'What does your father do?' B: 'He is a ...'",
+    options: ["a doctor", "doctor", "doctors"],
+    correctAnswer: "a doctor",
+  },
+  {
+    question: "8. Complete the sentence: 'She will be a great ...'",
+    options: ["worker", "writer", "waiter"],
+    correctAnswer: "writer",
+  },
+  {
+    question: "9. To ask about someone's future job, you say: 'What do you ...'",
+    options: ["will buy?", "want to be?", "are doing?"],
+    correctAnswer: "want to be?",
+  },
+  {
+    question: "10. 'I want to be a policeman.' 'Policeman' means...",
+    options: ["Tentara", "Polisi", "Suster"],
+    correctAnswer: "Polisi",
+  },
+];
+
+const localStorageKey_Answers = "quiz_bing_6_10_answers";
+const localStorageKey_Score = "quiz_bing_6_10_score";
+
+export default function MateriBing6Bab10Page() {
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [score, setScore] = useState(null);
+  const [showAnswers, setShowAnswers] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  const [videoUrl, setVideoUrl] = useState("");
+  const [loadingVideo, setLoadingVideo] = useState(true);
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  useEffect(() => {
+    async function fetchVideo() {
+      setLoadingVideo(true);
+
+      const { data, error } = await supabase
+        .from("videos")
+        .select("youtube_url")
+        .eq("kelas", "6")
+        .eq("pelajaran", "Bahasa Inggris")
+        .eq("bab", "Bab 11")
+        .single();
+
+      if (!error && data) {
+        setVideoUrl(data.youtube_url);
+      }
+
+      setLoadingVideo(false);
+    }
+
+    fetchVideo();
+  }, []);
+
+  useEffect(() => {
+    setIsClient(true);
+    const savedAnswers = localStorage.getItem(localStorageKey_Answers);
+    const savedScore = localStorage.getItem(localStorageKey_Score);
+
+    if (savedAnswers) setSelectedAnswers(JSON.parse(savedAnswers));
+    if (savedScore) setScore(JSON.parse(savedScore));
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem(
+        localStorageKey_Answers,
+        JSON.stringify(selectedAnswers)
+      );
+    }
+  }, [selectedAnswers, isClient]);
+
+  useEffect(() => {
+    if (isClient && score !== null) {
+      localStorage.setItem(localStorageKey_Score, JSON.stringify(score));
+    }
+  }, [score, isClient]);
+
+  const handleAnswerChange = (index, answer) => {
+    if (score === null) {
+      setSelectedAnswers({ ...selectedAnswers, [index]: answer });
+    }
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (score !== null) return;
+
+    let newScore = 0;
+    quizQuestions.forEach((q, i) => {
+      if (selectedAnswers[i] === q.correctAnswer) newScore++;
+    });
+
+    setScore(newScore);
+    setShowAnswers(false);
+  };
+
+  const handleResetQuiz = () => {
+    setSelectedAnswers({});
+    setScore(null);
+    setShowAnswers(false);
+    localStorage.removeItem(localStorageKey_Answers);
+    localStorage.removeItem(localStorageKey_Score);
+  };
+
+  return (
+    <div className="bg-white min-h-screen flex flex-col">
+      <Navbar />
+
+      <main className="py-10 md:py-16 flex-grow">
+        <div className="container mx-auto px-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 text-center mb-4">
+            Pusat Akademik Siswa
+          </h1>
+
+          <h2 className="text-2xl md:text-3xl font-semibold text-slate-700 text-center mb-10 md:mb-12">
+            I Want to be Teacher
+          </h2>
+
+          <div className="max-w-4xl mx-auto">
+            <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
+              Video Pembelajaran
+            </h3>
+
+            <div className="aspect-video w-full mb-10 rounded-lg shadow-xl overflow-hidden border border-gray-200">
+              {loadingVideo ? (
+                <div className="flex justify-center items-center h-full text-slate-500">
+                  Memuat video...
+                </div>
+              ) : videoUrl ? (
+                <iframe
+                  src={videoUrl}
+                  title="Video Pembelajaran Bab 10"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                ></iframe>
+              ) : (
+                <div className="flex justify-center items-center h-full text-slate-500">
+                  Video belum tersedia.
+                </div>
+              )}
+            </div>
+
+            <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
+              Uji Pemahaman (10 Soal)
+            </h3>
+
+            <form
+              onSubmit={handleSubmit}
+              className="p-4 md:p-6 border rounded-lg shadow-lg bg-white"
+            >
+              {quizQuestions.map((q, index) => {
+                const selected = selectedAnswers[index];
+
+                return (
+                  <div key={index} className="mb-6 pb-4 border-b last:border-b-0">
+                    <p className="font-semibold text-lg mb-3 text-gray-900">
+                      {q.question}
+                    </p>
+
+                    <div className="space-y-2">
+                      {q.options.map((option) => {
+                        const isCorrect = option === q.correctAnswer;
+                        const isSelected = option === selected;
+
+                        let labelClass = "text-gray-900";
+                        if (showAnswers) {
+                          if (isCorrect) labelClass = "text-green-600 font-bold";
+                          if (isSelected && !isCorrect)
+                            labelClass = "text-red-600 line-through";
+                        }
+
+                        return (
+                          <div key={option} className="flex items-center">
+                            <input
+                              type="radio"
+                              id={`q${index}_${option}`}
+                              name={`question_${index}`}
+                              value={option}
+                              checked={isSelected}
+                              onChange={() => handleAnswerChange(index, option)}
+                              disabled={score !== null}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+
+                            <label
+                              htmlFor={`q${index}_${option}`}
+                              className={`ml-3 block text-base font-medium ${labelClass}`}
+                            >
+                              {option}
+
+                              {showAnswers && isCorrect && (
+                                <BiCheckCircle className="inline ml-2 text-green-600" />
+                              )}
+
+                              {showAnswers && isSelected && !isCorrect && (
+                                <BiXCircle className="inline ml-2 text-red-600" />
+                              )}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                {score === null && (
+                  <button
+                    type="submit"
+                    className="px-6 py-2 border border-transparent bg-blue-600 text-white rounded-md font-semibold shadow-sm hover:bg-blue-700 transition-all"
+                  >
+                    Kirim Jawaban
+                  </button>
+                )}
+
+                {score !== null && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowAnswers(!showAnswers)}
+                      className="px-6 py-2 border border-slate-300 text-slate-700 rounded-md font-semibold hover:bg-slate-50 transition-all"
+                    >
+                      {showAnswers ? "Sembunyikan Jawaban" : "Lihat Kunci Jawaban"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetQuiz}
+                      className="px-6 py-2 border border-transparent text-red-600 rounded-md font-semibold hover:bg-red-50 transition-all"
+                    >
+                      Ulangi Kuis
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {score !== null && (
+                <div className="mt-6 p-4 rounded-md bg-blue-50 border border-blue-200">
+                  <p className="font-semibold text-blue-800 text-lg">
+                    Skor Anda (tersimpan di perangkat ini): {score} /{" "}
+                    {quizQuestions.length}
+                  </p>
+                </div>
+              )}
+            </form>
+
+            <div className="text-center mt-8 md:mt-12">
+              <Link
+                href="/akademik/kelas-6/bahasa-inggris"
+                className="inline-flex items-center px-6 py-2 border border-slate-300 text-slate-600 rounded-full font-semibold hover:bg-slate-50 transition-all duration-200"
+              >
+                <BiArrowBack className="mr-2" />
+                Kembali ke Pilih Bab
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
