@@ -82,7 +82,7 @@ const VisiMisi = () => {
 const Stats = () => {
   const statsData = [
     { id: 1, icon: <HiOutlineUsers size={40} />, number: '204', label: 'Siswa Aktif' },
-    { id: 2, icon: <HiOutlineAcademicCap size={40} />, number: '10', label: 'Guru & Staf' },
+    { id: 2, icon: <HiOutlineAcademicCap size={40} />, number: '11', label: 'Guru & Staf' },
     { id: 3, icon: <HiOutlineBookOpen size={40} />, number: '8', label: 'Ruang Kelas' },
     { id: 4, icon: <HiOutlineOfficeBuilding size={40} />, number: '12', label: 'Sarana & Prasarana' },
   ];
