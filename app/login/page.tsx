@@ -12,13 +12,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   // State untuk menampilkan pesan error
   const [error, setError] = useState('');
-  
+  const [loading, setLoading] = useState(false);
+
   const router = useRouter(); // Inisialisasi router
 
   // Fungsi yang dijalankan saat form disubmit
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); // Hentikan form agar tidak me-reload halaman
     setError(''); // Bersihkan error sebelumnya
+    setLoading(true);
 
     try {
       // 4. Kirim data ke backend API (/api/login)
@@ -27,26 +29,39 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ 
+          username: username.trim(),
+          password: password.trim()
+         }),
       });
 
       const data = await response.json();
+      console.log("LOGIN_FRONT_RESULT", data);
 
-      // 6. Cek balasan dari server
-      if (data.success) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        // JIKA SUKSES:
-        alert('Login berhasil! Mengarahkan ke dashboard...');
-        // Arahkan ke halaman admin (Pastikan halaman /admin ada)
-        router.push('/admin'); 
-
-      } else {
-        // JIKA GAGAL:
-        setError(data.message); // Tampilkan pesan error dari server
+      if (!data.success) {
+        setError(data.message || "Gagal login");
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      // Jika server tidak terjangkau (Vercel mati, dll)
-      setError('Tidak dapat terhubung ke server. Coba lagi.');
+
+      // simpan ke localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "admin_users",
+          JSON.stringify({
+            id: data.user.id,
+            username: data.user.username,
+          })
+        );
+        console.log("SET_LOCALSTORAGE_ADMIN_USERS");
+      }
+
+      router.push("/admin");
+    } catch (err) {
+      console.error("LOGIN_FRONT_ERROR", err);
+      setError("Tidak dapat terhubung ke server. Coba lagi.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,12 +133,13 @@ export default function LoginPage() {
           {/* Tombol Submit */}
           <button 
             type="submit" 
+            disabled={loading}
             className="w-full justify-center rounded-md border border-transparent bg-blue-600 py-3 px-4 text-lg font-medium text-white shadow-sm transition-all duration-300 hover:bg-blue-700 hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Log In
+             {loading ? "Memproses..." : "Log In"}
           </button>
         </form>
-
+    
         {/* Link Kembali ke Beranda */}
         <div className="mt-6 text-center">
           <Link 
