@@ -29,7 +29,7 @@ const VisiMisi = () => {
         <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-stretch">
           <div>
             <img 
-              src="/Dokumentasi/guru.jpeg" 
+              src="/Dokumentasi/GURU.jpeg" 
               alt="Guru mengajar di kelas"
               className="w-full h-full object-cover rounded-xl shadow-xl"
             />
