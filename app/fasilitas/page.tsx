@@ -16,6 +16,7 @@ const facilitiesData = [
   { imgSrc: "/Dokumentasi/WESTAFEL.png", alt: "Tempat Cuci Tangan", title: "Westafel" },
 ];
 
+// TAMBAHAN: Definisi Interface untuk Props
 interface FacilityCardProps {
   imgSrc: string;
   alt: string;
@@ -23,12 +24,12 @@ interface FacilityCardProps {
 }
 
 // Komponen Kartu (Dibuat responsif)
+// PERBAIKAN: Menambahkan tipe data FacilityCardProps ke props
 const FacilityCard = ({ imgSrc, alt, title }: FacilityCardProps) => (
   <div className="bg-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 overflow-hidden flex flex-col h-full">
     <img
       src={imgSrc}
       alt={alt}
-      // PERUBAHAN: Tinggi gambar lebih kecil di HP (h-56), dan lebih besar di desktop (md:h-64)
       className="w-full h-56 md:h-64 object-cover"
     />
     {/* PERUBAHAN: Padding lebih kecil di HP (p-4), dan lebih besar di desktop (md:p-5) */}
