@@ -16,8 +16,14 @@ const facilitiesData = [
   { imgSrc: "/Dokumentasi/WESTAFEL.png", alt: "Tempat Cuci Tangan", title: "Westafel" },
 ];
 
+interface FacilityCardProps {
+  imgSrc: string;
+  alt: string;
+  title: string;
+}
+
 // Komponen Kartu (Dibuat responsif)
-const FacilityCard = ({ imgSrc, alt, title }) => (
+const FacilityCard = ({ imgSrc, alt, title }: FacilityCardProps) => (
   <div className="bg-white rounded-xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 overflow-hidden flex flex-col h-full">
     <img
       src={imgSrc}
