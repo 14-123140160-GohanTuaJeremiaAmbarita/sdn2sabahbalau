@@ -24,7 +24,7 @@ const BAB_TITLE = "Materi Bab 3: How Much Do the Apples Cost?";
 const SUB_BAB_TITLE = "Bab 3";
 
 export default function MateriPage() {
-  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<number | null>(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [isClient, setIsClient] = useState(false);

@@ -18,7 +18,7 @@ const localStorageKey_Score = `${MODULE_KEY}_score_v2`;
 const localStorageKey_Questions = `${MODULE_KEY}_questions_v2`; 
 
 export default function MateriBing5Bab1Page() {
-  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<number | null>(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [isClient, setIsClient] = useState(false);

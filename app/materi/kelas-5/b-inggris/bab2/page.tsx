@@ -24,7 +24,7 @@ const BAB_TITLE = "Materi Bab 2: I Drink a Glass of Milk";
 const SUB_BAB_TITLE = "Bab 2";
 
 export default function MateriPage() {
-  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [score, setScore] = useState<number | null>(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [isClient, setIsClient] = useState(false);
