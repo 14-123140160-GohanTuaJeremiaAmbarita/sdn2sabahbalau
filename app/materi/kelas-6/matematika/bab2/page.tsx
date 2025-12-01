@@ -1,4 +1,4 @@
-"use client"; 
+"use client";
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -12,12 +12,13 @@ import { getQuestionsForModule, selectRandomQuestions, QuizQuestion } from '@/li
 
 // --- KONFIGURASI KUIS KHUSUS BAB INI ---
 const MODULE_KEY = "mtk_6_2"; // Kunci unik modul
+const PAGE_TITLE = "Simbol dan Kalimat Matematika";
 const DISPLAY_COUNT = 10;
-const localStorageKey_Answers = `${MODULE_KEY}_answers_v2`; 
-const localStorageKey_Score = `${MODULE_KEY}_score_v2`; 
-const localStorageKey_Questions = `${MODULE_KEY}_questions_v2`; 
+const localStorageKey_Answers = `${MODULE_KEY}_answers_v3`; 
+const localStorageKey_Score = `${MODULE_KEY}_score_v3`; 
+const localStorageKey_Questions = `${MODULE_KEY}_questions_v3`; 
 
-export default function MateriMtk6Bab2Page() {
+export default function MateriMatematikakelas6page() {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [score, setScore] = useState<number | null>(null);
   const [showAnswers, setShowAnswers] = useState(false);
@@ -27,20 +28,21 @@ export default function MateriMtk6Bab2Page() {
   const [videoUrl, setVideoUrl] = useState("");
   const [loadingVideo, setLoadingVideo] = useState(true);
 
-  // Ambil semua soal dari data terpusat
   const fullQuestionPool: QuizQuestion[] = getQuestionsForModule(MODULE_KEY);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-  
-  // --- LOGIKA UTAMA ---
 
+  // --- LOGIKA UTAMA KUIS (MEMUAT/MERESET SOAL) ---
   const loadNewQuiz = (savedQuestionsJson: string | null = null) => {
-    const questionsToDisplay = savedQuestionsJson 
-      ? JSON.parse(savedQuestionsJson)
-      : selectRandomQuestions(fullQuestionPool, DISPLAY_COUNT); 
+    let questionsToDisplay;
+    if (savedQuestionsJson) {
+      questionsToDisplay = JSON.parse(savedQuestionsJson);
+    } else {
+      questionsToDisplay = selectRandomQuestions(fullQuestionPool, DISPLAY_COUNT);
+    }
 
     setDisplayedQuestions(questionsToDisplay);
     if (typeof window !== 'undefined') {
@@ -48,6 +50,20 @@ export default function MateriMtk6Bab2Page() {
     }
   };
 
+  const handleResetQuiz = () => {
+    setSelectedAnswers({});
+    setScore(null);
+    setShowAnswers(false);
+    
+    localStorage.removeItem(localStorageKey_Answers);
+    localStorage.removeItem(localStorageKey_Score);
+    localStorage.removeItem(localStorageKey_Questions);
+    
+    loadNewQuiz(null); // Muat 10 soal acak yang baru (Fitur Redeem Soal)
+  };
+  // ----------------------------------------------------
+
+  // === FETCH VIDEO DARI SUPABASE ===
   useEffect(() => {
     async function fetchVideo() {
       setLoadingVideo(true);
@@ -58,6 +74,7 @@ export default function MateriMtk6Bab2Page() {
         .eq("pelajaran", "Matematika")
         .eq("bab", "Bab 2")
         .single();
+
       if (error) { console.error("⚠️ Gagal ambil video:", error); } 
       else if (data) { setVideoUrl(data.youtube_url); }
       setLoadingVideo(false);
@@ -65,6 +82,7 @@ export default function MateriMtk6Bab2Page() {
     fetchVideo();
   }, []);
 
+  // === LOGIKA LOCAL STORAGE (LOAD) ===
   useEffect(() => {
     setIsClient(true);
     const savedAnswers = localStorage.getItem(localStorageKey_Answers);
@@ -77,6 +95,7 @@ export default function MateriMtk6Bab2Page() {
     loadNewQuiz(savedQuestions);
   }, []); 
 
+  // === LOGIKA LOCAL STORAGE (SAVE) ===
   useEffect(() => {
     if (isClient) {
       localStorage.setItem(localStorageKey_Answers, JSON.stringify(selectedAnswers));
@@ -91,58 +110,49 @@ export default function MateriMtk6Bab2Page() {
   
   const handleAnswerChange = (questionIndex: number, answer: string) => {
     if (score === null) {
-      setSelectedAnswers({
-        ...selectedAnswers,
-        [questionIndex]: answer
-      });
+      setSelectedAnswers({ ...selectedAnswers, [questionIndex]: answer });
     }
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (score !== null) return; 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (score !== null) return;
 
     let newScore = 0;
-    displayedQuestions.forEach((q, index) => {
-      if (selectedAnswers[index] === q.correctAnswer) {
-        newScore++;
-      }
+    displayedQuestions.forEach((q, idx) => {
+      if (selectedAnswers[idx] === q.correctAnswer) newScore++;
     });
     setScore(newScore);
     setShowAnswers(false);
   };
-
-  // --- FITUR RESET/REDEEM KUIS BARU ---
-  const handleResetQuiz = () => {
-    setSelectedAnswers({});
-    setScore(null);
-    setShowAnswers(false);
-    
-    localStorage.removeItem(localStorageKey_Answers);
-    localStorage.removeItem(localStorageKey_Score);
-    localStorage.removeItem(localStorageKey_Questions);
-    
-    loadNewQuiz(null); // Muat 10 soal acak yang baru
-  };
+  
+  if (!fullQuestionPool.length) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">Error: Data soal kuis tidak ditemukan untuk modul ini.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
       <Navbar />
-      <main className="py-10 md:py-16 flex-grow">
+      <main className="py-16 md:py-20 flex-grow">
         <div className="container mx-auto px-4">
-          
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 text-center mb-4">
+
+          <h1 className="text-4xl font-bold text-slate-800 text-center mb-4">
             Pusat Akademik Siswa
           </h1>
-          <h2 className="text-2xl md:text-3xl font-semibold text-slate-700 text-center mb-10 md:mb-12">
-            Materi Bab 2: Simbol dan Kalimat Desimal
+          <h2 className="text-3xl font-semibold text-slate-700 text-center mb-12">
+            Materi Bab 2: {PAGE_TITLE}
           </h2>
 
           <div className="max-w-4xl mx-auto">
-            <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
+
+            <h3 className="text-2xl font-semibold text-slate-800 mb-4">
               Video Pembelajaran
             </h3>
-            
+
             <div className="aspect-video w-full mb-10 rounded-lg shadow-xl overflow-hidden border border-gray-200">
               {loadingVideo ? (
                 <div className="flex justify-center items-center h-full text-slate-500">
@@ -151,7 +161,7 @@ export default function MateriMtk6Bab2Page() {
               ) : videoUrl ? (
                 <iframe
                   src={videoUrl}
-                  title="Video Pembelajaran Bab 2"
+                  title={`Video Pembelajaran: ${PAGE_TITLE}`}
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -167,87 +177,88 @@ export default function MateriMtk6Bab2Page() {
             <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
               Uji Pemahaman 
             </h3>
-            
-            <form 
+
+            <form
               onSubmit={handleSubmit}
               className="p-4 md:p-6 border rounded-lg shadow-lg bg-white"
             >
-              {displayedQuestions.map((q, index) => {
-                const isUserAnswered = selectedAnswers[index] !== undefined;
+              {displayedQuestions.map((q, index) => (
+                <div key={index} className="mb-6 pb-4 border-b last:border-b-0">
+                  <p className="font-semibold text-lg mb-3 text-gray-900">
+                    {index + 1}. {q.question.replace(/^\d+\. /, '')}
+                  </p>
+                  <div className="space-y-2">
+                    {q.options.map((option) => {
+                      const isCorrect = q.correctAnswer === option;
+                      const isSelected = selectedAnswers[index] === option;
+                      let labelClass = "text-slate-700";
 
-                return (
-                  <div key={index} className="mb-6 pb-4 border-b last:border-b-0">
-                    <p className="font-semibold text-lg mb-3 text-gray-900">
-                      {index + 1}. {q.question.replace(/^\d+\. /, '')}
-                    </p>
-                    <div className="space-y-2">
-                      {q.options.map((option) => {
-                        const isOptionCorrect = q.correctAnswer === option;
-                        const isOptionSelected = selectedAnswers[index] === option;
-                        let labelClass = "text-gray-900"; 
-                        
-                        if (showAnswers && isUserAnswered) {
-                          if (isOptionCorrect) labelClass = "text-green-600 font-bold";
-                          if (isOptionSelected && !isOptionCorrect) labelClass = "text-red-600 line-through";
-                        }
+                      if (score !== null) {
+                        if (isCorrect) labelClass = "text-green-600 font-bold";
+                        if (isSelected && !isCorrect) labelClass = "text-red-600 line-through";
+                      }
 
-                        return (
-                          <div key={option} className="flex items-center">
-                            <input
-                              type="radio"
-                              id={`q${index}_${option}`}
-                              name={`question_${index}`}
-                              value={option}
-                              checked={isOptionSelected}
-                              onChange={() => handleAnswerChange(index, option)}
-                              disabled={score !== null} 
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <label 
-                              htmlFor={`q${index}_${option}`}
-                              className={`ml-3 block text-base font-medium ${labelClass}`}
-                            >
-                              {option}
-                              {showAnswers && isOptionCorrect && <BiCheckCircle className="inline ml-2 text-green-600" />}
-                              {showAnswers && isOptionSelected && !isOptionCorrect && <BiXCircle className="inline ml-2 text-red-600" />}
-                            </label>
-                          </div>
-                        );
-                      })}
-                    </div>
+                      const optionId = `q${index}_${option.replace(/\s+/g, '')}`;
+
+                      return (
+                        <div key={option} className="flex items-center">
+                          <input
+                            type="radio"
+                            id={optionId}
+                            name={`question_${index}`}
+                            value={option}
+                            checked={isSelected}
+                            onChange={() => handleAnswerChange(index, option)}
+                            disabled={score !== null}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          />
+                          <label
+                            htmlFor={optionId}
+                            className={`ml-3 block text-sm font-medium ${labelClass}`}
+                          >
+                            {option}
+                            {score !== null && isCorrect && (
+                              <BiCheckCircle className="inline ml-2 text-green-600" />
+                            )}
+                            {score !== null && isSelected && !isCorrect && (
+                              <BiXCircle className="inline ml-2 text-red-600" />
+                            )}
+                          </label>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-              
+                </div>
+              ))}
+
               <div className="mt-6 flex flex-wrap items-center gap-4">
                 {score === null && (
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="px-6 py-2 border border-transparent bg-blue-600 text-white rounded-md font-semibold shadow-sm hover:bg-blue-700 transition-all"
                     disabled={Object.keys(selectedAnswers).length < DISPLAY_COUNT}
                   >
                     Kirim Jawaban
                   </button>
                 )}
-                
+
                 {score !== null && (
-                  <button 
-                    type="button" 
-                    onClick={() => setShowAnswers(!showAnswers)}
-                    className="px-6 py-2 border border-slate-300 text-slate-700 rounded-md font-semibold hover:bg-slate-50 transition-all"
-                  >
-                    {showAnswers ? "Sembunyikan Jawaban" : "Lihat Kunci Jawaban"}
-                  </button>
-                )}
-                
-                {score !== null && (
-                  <button 
-                    type="button" 
-                    onClick={handleResetQuiz}
-                    className="px-6 py-2 border border-transparent text-red-600 rounded-md font-semibold hover:bg-red-50 transition-all"
-                  >
-                    Ulangi Kuis 
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowAnswers(!showAnswers)}
+                      className="px-6 py-2 border border-slate-300 text-slate-700 rounded-md font-semibold hover:bg-slate-50 transition-all"
+                    >
+                      {showAnswers ? "Sembunyikan Jawaban" : "Lihat Kunci Jawaban"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetQuiz}
+                      className="px-6 py-2 border border-transparent text-red-600 rounded-md font-semibold hover:bg-red-50 transition-all"
+                    >
+                      Ulangi Kuis 
+                    </button>
+                  </>
                 )}
               </div>
 
@@ -260,16 +271,16 @@ export default function MateriMtk6Bab2Page() {
               )}
             </form>
 
-            <div className="text-center mt-8 md:mt-12">
-              <Link 
-                href="/akademik/kelas-5/matematika" 
+            <div className="text-center mt-12">
+              <Link
+                href="/akademik/kelas-6/matematika"
                 className="inline-flex items-center px-6 py-2 border border-slate-300 text-slate-600 rounded-full font-semibold hover:bg-slate-50 transition-all duration-200"
               >
                 <BiArrowBack className="mr-2" />
                 Kembali ke Pilih Bab
               </Link>
             </div>
-            
+
           </div>
         </div>
       </main>

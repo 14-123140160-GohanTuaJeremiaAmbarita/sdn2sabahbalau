@@ -2,90 +2,68 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { BiArrowBack, BiCheckCircle, BiXCircle } from "react-icons/bi";
 import { createClient } from "@supabase/supabase-js";
 
-const quizQuestions = [
-  {
-    question: "1. Rumus kecepatan adalah ...",
-    options: ["Jarak × Waktu", "Jarak ÷ Waktu", "Waktu ÷ Jarak"],
-    correctAnswer: "Jarak ÷ Waktu",
-  },
-  {
-    question: "2. Satuan kecepatan dalam SI adalah ...",
-    options: ["km/jam", "m/s", "cm/detik"],
-    correctAnswer: "m/s",
-  },
-  {
-    question:
-      "3. Jika jarak 120 km ditempuh dalam waktu 3 jam, maka kecepatannya adalah ...",
-    options: ["30 km/jam", "40 km/jam", "60 km/jam"],
-    correctAnswer: "40 km/jam",
-  },
-  {
-    question:
-      "4. Sebuah mobil menempuh 200 km dalam waktu 4 jam. Kecepatannya adalah ...",
-    options: ["50 km/jam", "100 km/jam", "25 km/jam"],
-    correctAnswer: "50 km/jam",
-  },
-  {
-    question:
-      "5. Jika kecepatan 60 km/jam dan waktu 2 jam, maka jarak yang ditempuh adalah ...",
-    options: ["120 km", "30 km", "100 km"],
-    correctAnswer: "120 km",
-  },
-  {
-    question:
-      "6. Jika jarak 150 km dan kecepatan 50 km/jam, waktu tempuhnya adalah ...",
-    options: ["2 jam", "3 jam", "4 jam"],
-    correctAnswer: "3 jam",
-  },
-  {
-    question:
-      "7. Sepeda bergerak dengan kecepatan 10 m/s selama 120 detik. Jarak yang ditempuh adalah ...",
-    options: ["1.200 m", "12.000 m", "1.000 m"],
-    correctAnswer: "1.200 m",
-  },
-  {
-    question:
-      "8. Mobil A melaju dengan kecepatan 80 km/jam, mobil B 60 km/jam. Mobil mana yang lebih cepat?",
-    options: ["Mobil A", "Mobil B", "Sama cepat"],
-    correctAnswer: "Mobil A",
-  },
-  {
-    question:
-      "9. Jika jarak 360 km ditempuh dalam 6 jam, maka kecepatan rata-ratanya adalah ...",
-    options: ["60 km/jam", "30 km/jam", "90 km/jam"],
-    correctAnswer: "60 km/jam",
-  },
-  {
-    question:
-      "10. Jika waktu tempuh 5 jam dan kecepatan 72 km/jam, maka jarak yang ditempuh adalah ...",
-    options: ["300 km", "350 km", "360 km"],
-    correctAnswer: "360 km",
-  },
-];
+// IMPORT UTILITY BARU
+import { getQuestionsForModule, selectRandomQuestions, QuizQuestion } from '@/lib/quiz-utils'; 
 
-const localStorageKey_Answers = "quiz_mtk_6_9_answers";
-const localStorageKey_Score = "quiz_mtk_6_9_score";
+// --- KONFIGURASI KUIS KHUSUS BAB INI ---
+const MODULE_KEY = "mtk_6_9"; // Kunci unik modul
+const PAGE_TITLE = "Kecepatan";
+const DISPLAY_COUNT = 10;
+const localStorageKey_Answers = `${MODULE_KEY}_answers_v3`; 
+const localStorageKey_Score = `${MODULE_KEY}_score_v3`; 
+const localStorageKey_Questions = `${MODULE_KEY}_questions_v3`; 
 
 export default function MateriMatematikaKelas6Bab9Page() {
-  const videoTitle = "Materi Bab 9: Kecepatan";
-
   const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [score, setScore] = useState(null);
+  const [score, setScore] = useState<number | null>(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [displayedQuestions, setDisplayedQuestions] = useState<QuizQuestion[]>([]); 
+  
   const [videoUrl, setVideoUrl] = useState("");
   const [loadingVideo, setLoadingVideo] = useState(true);
+
+  const fullQuestionPool: QuizQuestion[] = getQuestionsForModule(MODULE_KEY);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // --- LOGIKA UTAMA KUIS (MEMUAT/MERESET SOAL) ---
+  const loadNewQuiz = (savedQuestionsJson: string | null = null) => {
+    let questionsToDisplay;
+    if (savedQuestionsJson) {
+      questionsToDisplay = JSON.parse(savedQuestionsJson);
+    } else {
+      questionsToDisplay = selectRandomQuestions(fullQuestionPool, DISPLAY_COUNT);
+    }
+
+    setDisplayedQuestions(questionsToDisplay);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(localStorageKey_Questions, JSON.stringify(questionsToDisplay));
+    }
+  };
+
+  const handleResetQuiz = () => {
+    setSelectedAnswers({});
+    setScore(null);
+    setShowAnswers(false);
+    
+    localStorage.removeItem(localStorageKey_Answers);
+    localStorage.removeItem(localStorageKey_Score);
+    localStorage.removeItem(localStorageKey_Questions);
+    
+    loadNewQuiz(null); // Muat 10 soal acak yang baru (Redeem Soal)
+  };
+  // ----------------------------------------------------
+
+  // === FETCH VIDEO DARI SUPABASE ===
   useEffect(() => {
     async function fetchVideo() {
       setLoadingVideo(true);
@@ -97,63 +75,62 @@ export default function MateriMatematikaKelas6Bab9Page() {
         .eq("bab", "Bab 9")
         .single();
 
-      if (error) {
-        console.error("⚠️ Gagal ambil video:", error);
-      } else if (data) {
-        setVideoUrl(data.youtube_url);
-      }
+      if (error) { console.error("⚠️ Gagal ambil video:", error); } 
+      else if (data) { setVideoUrl(data.youtube_url); }
       setLoadingVideo(false);
     }
-
     fetchVideo();
   }, []);
 
+  // === LOGIKA LOCAL STORAGE (LOAD) ===
   useEffect(() => {
     setIsClient(true);
     const savedAnswers = localStorage.getItem(localStorageKey_Answers);
     const savedScore = localStorage.getItem(localStorageKey_Score);
+    const savedQuestions = localStorage.getItem(localStorageKey_Questions);
+    
     if (savedAnswers) setSelectedAnswers(JSON.parse(savedAnswers));
     if (savedScore) setScore(JSON.parse(savedScore));
-  }, []);
+    
+    loadNewQuiz(savedQuestions);
+  }, []); 
 
+  // === LOGIKA LOCAL STORAGE (SAVE) ===
   useEffect(() => {
-    if (!isClient) return;
-    localStorage.setItem(
-      localStorageKey_Answers,
-      JSON.stringify(selectedAnswers)
-    );
+    if (isClient) {
+      localStorage.setItem(localStorageKey_Answers, JSON.stringify(selectedAnswers));
+    }
   }, [selectedAnswers, isClient]);
 
   useEffect(() => {
-    if (!isClient || score === null) return;
-    localStorage.setItem(localStorageKey_Score, JSON.stringify(score));
+    if (isClient && score !== null) {
+      localStorage.setItem(localStorageKey_Score, JSON.stringify(score));
+    }
   }, [score, isClient]);
 
-  const handleAnswerChange = (index, answer) => {
+  const handleAnswerChange = (index: number, answer: string) => {
     if (score !== null) return;
     setSelectedAnswers((prev) => ({ ...prev, [index]: answer }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (score !== null) return;
     let newScore = 0;
-    quizQuestions.forEach((q, i) => {
+    displayedQuestions.forEach((q, i) => {
       if (selectedAnswers[i] === q.correctAnswer) newScore++;
     });
     setScore(newScore);
     setShowAnswers(false);
   };
-
-  const handleResetQuiz = () => {
-    setSelectedAnswers({});
-    setScore(null);
-    setShowAnswers(false);
-    localStorage.removeItem(localStorageKey_Answers);
-    localStorage.removeItem(localStorageKey_Score);
-  };
-
-  if (!isClient) return null;
+  
+  if (!fullQuestionPool.length) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">Error: Data soal kuis tidak ditemukan untuk modul ini.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
@@ -164,7 +141,7 @@ export default function MateriMatematikaKelas6Bab9Page() {
             Pusat Akademik Siswa
           </h1>
           <h2 className="text-2xl md:text-3xl font-semibold text-slate-700 text-center mb-10 md:mb-12">
-            {videoTitle}
+            Materi Bab 9: {PAGE_TITLE}
           </h2>
 
           <div className="max-w-4xl mx-auto">
@@ -179,7 +156,7 @@ export default function MateriMatematikaKelas6Bab9Page() {
               ) : videoUrl ? (
                 <iframe
                   src={videoUrl}
-                  title={`Video Pembelajaran: ${videoTitle}`}
+                  title={`Video Pembelajaran: ${PAGE_TITLE}`}
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -193,19 +170,19 @@ export default function MateriMatematikaKelas6Bab9Page() {
             </div>
 
             <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
-              Uji Pemahaman (10 Soal)
+              Uji Pemahaman 
             </h3>
             <form
               onSubmit={handleSubmit}
               className="p-4 md:p-6 border rounded-lg shadow-lg bg-white"
             >
-              {quizQuestions.map((q, qIndex) => (
+              {displayedQuestions.map((q, qIndex) => (
                 <div
                   key={`question-${qIndex}`}
                   className="mb-6 pb-4 border-b last:border-b-0"
                 >
                   <p className="font-semibold text-lg mb-3 text-gray-900">
-                    {q.question}
+                    {qIndex + 1}. {q.question.replace(/^\d+\. /, '')}
                   </p>
 
                   <div className="space-y-2">
@@ -213,7 +190,7 @@ export default function MateriMatematikaKelas6Bab9Page() {
                       const isCorrect = q.correctAnswer === option;
                       const isSelected = selectedAnswers[qIndex] === option;
                       let labelClass = "text-slate-700";
-                      if (showAnswers) {
+                      if (score !== null) {
                         if (isCorrect) labelClass = "text-green-600 font-bold";
                         if (isSelected && !isCorrect)
                           labelClass = "text-red-600 line-through";
@@ -222,7 +199,7 @@ export default function MateriMatematikaKelas6Bab9Page() {
                       const optionId = `q${qIndex}_opt${optIndex}`;
                       return (
                         <div
-                          key={`${qIndex}-${optIndex}-${option}`}
+                          key={`opt-${qIndex}-${optIndex}-${option}`}
                           className="flex items-center"
                         >
                           <input
@@ -240,10 +217,10 @@ export default function MateriMatematikaKelas6Bab9Page() {
                             className={`ml-3 block text-sm font-medium ${labelClass}`}
                           >
                             {option}
-                            {showAnswers && isCorrect && (
+                            {score !== null && isCorrect && (
                               <BiCheckCircle className="inline ml-2 text-green-600" />
                             )}
-                            {showAnswers && isSelected && !isCorrect && (
+                            {score !== null && isSelected && !isCorrect && (
                               <BiXCircle className="inline ml-2 text-red-600" />
                             )}
                           </label>
@@ -259,6 +236,7 @@ export default function MateriMatematikaKelas6Bab9Page() {
                   <button
                     type="submit"
                     className="px-6 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition-all"
+                    disabled={Object.keys(selectedAnswers).length < DISPLAY_COUNT}
                   >
                     Kirim Jawaban
                   </button>
@@ -281,7 +259,7 @@ export default function MateriMatematikaKelas6Bab9Page() {
                       onClick={handleResetQuiz}
                       className="px-6 py-2 text-red-600 rounded-md font-semibold border border-transparent hover:bg-red-50 transition-all"
                     >
-                      Ulangi Kuis
+                      Ulangi Kuis 
                     </button>
                   </>
                 )}
@@ -291,7 +269,7 @@ export default function MateriMatematikaKelas6Bab9Page() {
                 <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="font-semibold text-blue-800 text-lg">
                     Skor Anda (tersimpan di perangkat ini): {score} /{" "}
-                    {quizQuestions.length}
+                    {displayedQuestions.length}
                   </p>
                 </div>
               )}

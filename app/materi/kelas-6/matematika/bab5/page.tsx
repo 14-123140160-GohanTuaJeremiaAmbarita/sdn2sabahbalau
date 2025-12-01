@@ -2,82 +2,68 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { BiArrowBack, BiCheckCircle, BiXCircle } from "react-icons/bi";
 import { createClient } from "@supabase/supabase-js";
 
-const quizQuestions = [
-  {
-    question: "1. Kelipatan persekutuan terkecil (KPK) dari 4 dan 6 adalah ...",
-    options: ["8", "12", "24"],
-    correctAnswer: "12",
-  },
-  {
-    question: "2. Faktor persekutuan terbesar (FPB) dari 18 dan 24 adalah ...",
-    options: ["3", "6", "12"],
-    correctAnswer: "6",
-  },
-  {
-    question: "3. Jika 2 : 5 = x : 20, maka nilai x adalah ...",
-    options: ["4", "6", "8"],
-    correctAnswer: "8",
-  },
-  {
-    question: "4. Perbandingan uang Rina dan Dini adalah 2 : 3. Jika uang Dini Rp30.000, maka uang Rina adalah ...",
-    options: ["Rp10.000", "Rp20.000", "Rp25.000"],
-    correctAnswer: "Rp20.000",
-  },
-  {
-    question: "5. KPK dari 8 dan 12 adalah ...",
-    options: ["16", "24", "36"],
-    correctAnswer: "24",
-  },
-  {
-    question: "6. FPB dari 20 dan 50 adalah ...",
-    options: ["5", "10", "20"],
-    correctAnswer: "10",
-  },
-  {
-    question: "7. 3 banding 9 sama dengan ...",
-    options: ["1 : 2", "1 : 3", "2 : 3"],
-    correctAnswer: "1 : 3",
-  },
-  {
-    question: "8. KPK dari 9 dan 12 adalah ...",
-    options: ["18", "24", "36"],
-    correctAnswer: "36",
-  },
-  {
-    question: "9. Perbandingan panjang tali 4 m dan 10 m dapat disederhanakan menjadi ...",
-    options: ["1 : 2", "2 : 3", "2 : 5"],
-    correctAnswer: "2 : 5",
-  },
-  {
-    question: "10. FPB dari 15, 25, dan 35 adalah ...",
-    options: ["3", "4", "5"],
-    correctAnswer: "5",
-  },
-];
+// IMPORT UTILITY BARU
+import { getQuestionsForModule, selectRandomQuestions, QuizQuestion } from '@/lib/quiz-utils'; 
 
-const localStorageKey_Answers = "quiz_mtk_6_5_answers";
-const localStorageKey_Score = "quiz_mtk_6_5_score";
+// --- KONFIGURASI KUIS KHUSUS BAB INI ---
+const MODULE_KEY = "mtk_6_5"; // Kunci unik modul
+const PAGE_TITLE = "Kelipatan dan Perbandingan";
+const DISPLAY_COUNT = 10;
+const localStorageKey_Answers = `${MODULE_KEY}_answers_v3`; 
+const localStorageKey_Score = `${MODULE_KEY}_score_v3`; 
+const localStorageKey_Questions = `${MODULE_KEY}_questions_v3`; 
 
 export default function MateriMatematikaKelas6Bab5Page() {
-  const videoTitle = "Materi Bab 5: Kelipatan dan Perbandingan";
-
   const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [score, setScore] = useState(null);
+  const [score, setScore] = useState<number | null>(null);
   const [showAnswers, setShowAnswers] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [displayedQuestions, setDisplayedQuestions] = useState<QuizQuestion[]>([]); 
+  
   const [videoUrl, setVideoUrl] = useState("");
   const [loadingVideo, setLoadingVideo] = useState(true);
+
+  const fullQuestionPool: QuizQuestion[] = getQuestionsForModule(MODULE_KEY);
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // --- LOGIKA UTAMA KUIS (MEMUAT/MERESET SOAL) ---
+  const loadNewQuiz = (savedQuestionsJson: string | null = null) => {
+    let questionsToDisplay;
+    if (savedQuestionsJson) {
+      questionsToDisplay = JSON.parse(savedQuestionsJson);
+    } else {
+      questionsToDisplay = selectRandomQuestions(fullQuestionPool, DISPLAY_COUNT);
+    }
+
+    setDisplayedQuestions(questionsToDisplay);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(localStorageKey_Questions, JSON.stringify(questionsToDisplay));
+    }
+  };
+
+  const handleResetQuiz = () => {
+    setSelectedAnswers({});
+    setScore(null);
+    setShowAnswers(false);
+    
+    localStorage.removeItem(localStorageKey_Answers);
+    localStorage.removeItem(localStorageKey_Score);
+    localStorage.removeItem(localStorageKey_Questions);
+    
+    loadNewQuiz(null); // Muat 10 soal acak yang baru (Fitur Redeem Soal)
+  };
+  // ----------------------------------------------------
+
+  // === FETCH VIDEO DARI SUPABASE ===
   useEffect(() => {
     async function fetchVideo() {
       setLoadingVideo(true);
@@ -89,60 +75,62 @@ export default function MateriMatematikaKelas6Bab5Page() {
         .eq("bab", "Bab 5")
         .single();
 
-      if (error) {
-        console.error("⚠️ Gagal ambil video:", error);
-      } else if (data) {
-        setVideoUrl(data.youtube_url);
-      }
+      if (error) { console.error("⚠️ Gagal ambil video:", error); } 
+      else if (data) { setVideoUrl(data.youtube_url); }
       setLoadingVideo(false);
     }
-
     fetchVideo();
   }, []);
 
+  // === LOGIKA LOCAL STORAGE (LOAD) ===
   useEffect(() => {
     setIsClient(true);
     const savedAnswers = localStorage.getItem(localStorageKey_Answers);
     const savedScore = localStorage.getItem(localStorageKey_Score);
+    const savedQuestions = localStorage.getItem(localStorageKey_Questions);
+    
     if (savedAnswers) setSelectedAnswers(JSON.parse(savedAnswers));
     if (savedScore) setScore(JSON.parse(savedScore));
-  }, []);
+    
+    loadNewQuiz(savedQuestions);
+  }, []); 
 
+  // === LOGIKA LOCAL STORAGE (SAVE) ===
   useEffect(() => {
-    if (!isClient) return;
-    localStorage.setItem(localStorageKey_Answers, JSON.stringify(selectedAnswers));
+    if (isClient) {
+      localStorage.setItem(localStorageKey_Answers, JSON.stringify(selectedAnswers));
+    }
   }, [selectedAnswers, isClient]);
 
   useEffect(() => {
-    if (!isClient || score === null) return;
-    localStorage.setItem(localStorageKey_Score, JSON.stringify(score));
+    if (isClient && score !== null) {
+      localStorage.setItem(localStorageKey_Score, JSON.stringify(score));
+    }
   }, [score, isClient]);
 
-  const handleAnswerChange = (index, answer) => {
+  const handleAnswerChange = (index: number, answer: string) => {
     if (score !== null) return;
     setSelectedAnswers((prev) => ({ ...prev, [index]: answer }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (score !== null) return;
     let newScore = 0;
-    quizQuestions.forEach((q, i) => {
+    displayedQuestions.forEach((q, i) => {
       if (selectedAnswers[i] === q.correctAnswer) newScore++;
     });
     setScore(newScore);
     setShowAnswers(false);
   };
-
-  const handleResetQuiz = () => {
-    setSelectedAnswers({});
-    setScore(null);
-    setShowAnswers(false);
-    localStorage.removeItem(localStorageKey_Answers);
-    localStorage.removeItem(localStorageKey_Score);
-  };
-
-  if (!isClient) return null;
+  
+  if (!fullQuestionPool.length) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">Error: Data soal kuis tidak ditemukan untuk modul ini.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
@@ -153,7 +141,7 @@ export default function MateriMatematikaKelas6Bab5Page() {
             Pusat Akademik Siswa
           </h1>
           <h2 className="text-2xl md:text-3xl font-semibold text-slate-700 text-center mb-10 md:mb-12">
-            {videoTitle}
+            Materi Bab 5: {PAGE_TITLE}
           </h2>
 
           <div className="max-w-4xl mx-auto">
@@ -168,7 +156,7 @@ export default function MateriMatematikaKelas6Bab5Page() {
               ) : videoUrl ? (
                 <iframe
                   src={videoUrl}
-                  title={`Video Pembelajaran: ${videoTitle}`}
+                  title={`Video Pembelajaran: ${PAGE_TITLE}`}
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -182,19 +170,19 @@ export default function MateriMatematikaKelas6Bab5Page() {
             </div>
 
             <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
-              Uji Pemahaman (10 Soal)
+              Uji Pemahaman 
             </h3>
             <form
               onSubmit={handleSubmit}
               className="p-4 md:p-6 border rounded-lg shadow-lg bg-white"
             >
-              {quizQuestions.map((q, qIndex) => (
+              {displayedQuestions.map((q, qIndex) => (
                 <div
                   key={`question-${qIndex}`}
                   className="mb-6 pb-4 border-b last:border-b-0"
                 >
                   <p className="font-semibold text-lg mb-3 text-gray-900">
-                    {q.question}
+                    {qIndex + 1}. {q.question.replace(/^\d+\. /, '')}
                   </p>
 
                   <div className="space-y-2">
@@ -203,7 +191,7 @@ export default function MateriMatematikaKelas6Bab5Page() {
                       const isSelected = selectedAnswers[qIndex] === option;
                       let labelClass = "text-slate-700";
 
-                      if (showAnswers) {
+                      if (score !== null) {
                         if (isCorrect) labelClass = "text-green-600 font-bold";
                         if (isSelected && !isCorrect)
                           labelClass = "text-red-600 line-through";
@@ -212,7 +200,7 @@ export default function MateriMatematikaKelas6Bab5Page() {
                       const optionId = `q${qIndex}_opt${optIndex}`;
                       return (
                         <div
-                          key={`${qIndex}-${optIndex}-${option}`}
+                          key={`opt-${qIndex}-${optIndex}-${option}`}
                           className="flex items-center"
                         >
                           <input
@@ -230,10 +218,10 @@ export default function MateriMatematikaKelas6Bab5Page() {
                             className={`ml-3 block text-sm font-medium ${labelClass}`}
                           >
                             {option}
-                            {showAnswers && isCorrect && (
+                            {score !== null && isCorrect && (
                               <BiCheckCircle className="inline ml-2 text-green-600" />
                             )}
-                            {showAnswers && isSelected && !isCorrect && (
+                            {score !== null && isSelected && !isCorrect && (
                               <BiXCircle className="inline ml-2 text-red-600" />
                             )}
                           </label>
@@ -249,6 +237,7 @@ export default function MateriMatematikaKelas6Bab5Page() {
                   <button
                     type="submit"
                     className="px-6 py-2 border border-transparent bg-blue-600 text-white rounded-md font-semibold shadow-sm hover:bg-blue-700 transition-all"
+                    disabled={Object.keys(selectedAnswers).length < DISPLAY_COUNT}
                   >
                     Kirim Jawaban
                   </button>
@@ -269,7 +258,7 @@ export default function MateriMatematikaKelas6Bab5Page() {
                       onClick={handleResetQuiz}
                       className="px-6 py-2 border border-transparent text-red-600 rounded-md font-semibold hover:bg-red-50 transition-all"
                     >
-                      Ulangi Kuis
+                      Ulangi Kuis 
                     </button>
                   </>
                 )}
@@ -279,7 +268,7 @@ export default function MateriMatematikaKelas6Bab5Page() {
                 <div className="mt-6 p-4 rounded-md bg-blue-50 border border-blue-200">
                   <p className="font-semibold text-blue-800 text-lg">
                     Skor Anda (tersimpan di perangkat ini): {score} /{" "}
-                    {quizQuestions.length}
+                    {displayedQuestions.length}
                   </p>
                 </div>
               )}
