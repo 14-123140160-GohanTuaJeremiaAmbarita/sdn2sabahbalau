@@ -5,116 +5,81 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { BiArrowBack, BiCheckCircle, BiXCircle } from 'react-icons/bi';
-import {createClient} from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
-// --- DATA KUIS BAB 4 MTK KELAS 5 ---
-const quizQuestions = [
-  {
-    question: "1. Dua bangun datar dikatakan kongruen jika memiliki bentuk dan ... yang sama.",
-    options: ["Ukuran", "Warna", "Berat"],
-    correctAnswer: "Ukuran"
-  },
-  {
-    question: "2. Total sudut dalam segitiga adalah...",
-    options: ["90 derajat", "180 derajat", "360 derajat"],
-    correctAnswer: "180 derajat"
-  },
-  {
-    question: "3. Sudut siku-siku memiliki besar ...",
-    options: ["Kurang dari 90 derajat", "Tepat 90 derajat", "Lebih dari 90 derajat"],
-    correctAnswer: "Tepat 90 derajat"
-  },
-  {
-    question: "4. Jika dua bangun kongruen, maka sisi-sisi yang bersesuaian memiliki panjang yang...",
-    options: ["Berbeda", "Setengahnya", "Sama"],
-    correctAnswer: "Sama"
-  },
-  {
-    question: "5. Sudut tumpul memiliki besar...",
-    options: ["Kurang dari 90 derajat", "Antara 90 dan 180 derajat", "Lebih dari 180 derajat"],
-    correctAnswer: "Antara 90 dan 180 derajat"
-  },
-  {
-    question: "6. Jika sebuah segitiga memiliki dua sudut 40° dan 60°, sudut ketiganya adalah...",
-    options: ["80°", "100°", "40°"],
-    correctAnswer: "80°"
-  },
-  {
-    question: "7. Pasangan bangun datar berikut yang PASTI kongruen adalah...",
-    options: ["Dua persegi dengan panjang sisi berbeda", "Dua lingkaran dengan jari-jari sama", "Dua persegi panjang"],
-    correctAnswer: "Dua lingkaran dengan jari-jari sama"
-  },
-  {
-    question: "8. Sudut lurus memiliki besar...",
-    options: ["180 derajat", "360 derajat", "90 derajat"],
-    correctAnswer: "180 derajat"
-  },
-  {
-    question: "9. Sudut yang besarnya 45° disebut sudut...",
-    options: ["Siku-siku", "Tumpul", "Lancip"],
-    correctAnswer: "Lancip"
-  },
-  {
-    question: "10. Dua bangun yang sebangun belum tentu kongruen. (Benar/Salah)",
-    options: ["Benar", "Salah"],
-    correctAnswer: "Benar"
-  }
-];
+// IMPORT UTILITY BARU
+import { getQuestionsForModule, selectRandomQuestions, QuizQuestion } from '@/lib/quiz-utils'; 
 
-const localStorageKey_Answers = 'quiz_mtk_5_4_answers';
-const localStorageKey_Score = 'quiz_mtk_5_4_score';
+// --- KONFIGURASI KUIS KHUSUS BAB INI ---
+const MODULE_KEY = "mtk_5_4"; // Kunci unik modul
+const DISPLAY_COUNT = 10;
+const localStorageKey_Answers = `${MODULE_KEY}_answers_v2`; 
+const localStorageKey_Score = `${MODULE_KEY}_score_v2`; 
+const localStorageKey_Questions = `${MODULE_KEY}_questions_v2`; 
 
 export default function MateriMtk5Bab4Page() {
   const [selectedAnswers, setSelectedAnswers] = useState({});
-    const [score, setScore] = useState<number | null>(null);
-    const [showAnswers, setShowAnswers] = useState(false);
-    const [isClient, setIsClient] = useState(false);
-    const [videoUrl, setVideoUrl] = useState("");
-    const [loadingVideo, setLoadingVideo] = useState(true);
+  const [score, setScore] = useState<number | null>(null);
+  const [showAnswers, setShowAnswers] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [displayedQuestions, setDisplayedQuestions] = useState<QuizQuestion[]>([]); 
+  
+  const [videoUrl, setVideoUrl] = useState("");
+  const [loadingVideo, setLoadingVideo] = useState(true);
 
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+  // Ambil semua soal dari data terpusat
+  const fullQuestionPool: QuizQuestion[] = getQuestionsForModule(MODULE_KEY);
 
-      useEffect(() => {
-          async function fetchVideo() {
-            setLoadingVideo(true);
-            const { data, error } = await supabase
-              .from("videos")
-              .select("youtube_url")
-              .eq("kelas", "5")
-              .eq("pelajaran", "Matematika")
-              .eq("bab", "Bab 4")
-              .single();
-      
-      
-            if (error) {
-              console.error("⚠️ Gagal ambil video:", error);
-            } else if (data) {
-              setVideoUrl(data.youtube_url);
-            }
-            setLoadingVideo(false);
-          }
-      
-          fetchVideo();
-        }, []);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  
+  // --- LOGIKA UTAMA ---
+
+  const loadNewQuiz = (savedQuestionsJson: string | null = null) => {
+    const questionsToDisplay = savedQuestionsJson 
+      ? JSON.parse(savedQuestionsJson)
+      : selectRandomQuestions(fullQuestionPool, DISPLAY_COUNT); 
+
+    setDisplayedQuestions(questionsToDisplay);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(localStorageKey_Questions, JSON.stringify(questionsToDisplay));
+    }
+  };
+
+  useEffect(() => {
+    async function fetchVideo() {
+      setLoadingVideo(true);
+      const { data, error } = await supabase
+        .from("videos")
+        .select("youtube_url")
+        .eq("kelas", "5")
+        .eq("pelajaran", "Matematika")
+        .eq("bab", "Bab 4")
+        .single();
+      if (error) { console.error("⚠️ Gagal ambil video:", error); } 
+      else if (data) { setVideoUrl(data.youtube_url); }
+      setLoadingVideo(false);
+    }
+    fetchVideo();
+  }, []);
 
   useEffect(() => {
     setIsClient(true);
     const savedAnswers = localStorage.getItem(localStorageKey_Answers);
     const savedScore = localStorage.getItem(localStorageKey_Score);
+    const savedQuestions = localStorage.getItem(localStorageKey_Questions);
     
     if (savedAnswers) setSelectedAnswers(JSON.parse(savedAnswers));
     if (savedScore) setScore(JSON.parse(savedScore));
+    
+    loadNewQuiz(savedQuestions);
   }, []); 
 
   useEffect(() => {
     if (isClient) {
-      localStorage.setItem(
-        localStorageKey_Answers, 
-        JSON.stringify(selectedAnswers)
-      );
+      localStorage.setItem(localStorageKey_Answers, JSON.stringify(selectedAnswers));
     }
   }, [selectedAnswers, isClient]);
 
@@ -124,7 +89,6 @@ export default function MateriMtk5Bab4Page() {
     }
   }, [score, isClient]);
   
-  // Fungsi untuk menangani perubahan radio button
   const handleAnswerChange = (questionIndex: number, answer: string) => {
     if (score === null) {
       setSelectedAnswers({
@@ -134,13 +98,12 @@ export default function MateriMtk5Bab4Page() {
     }
   };
 
-  // Fungsi saat form kuis disubmit
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (score !== null) return; 
 
     let newScore = 0;
-    quizQuestions.forEach((q, index) => {
+    displayedQuestions.forEach((q, index) => {
       if (selectedAnswers[index] === q.correctAnswer) {
         newScore++;
       }
@@ -149,15 +112,18 @@ export default function MateriMtk5Bab4Page() {
     setShowAnswers(false);
   };
 
-  // Fungsi untuk mereset kuis
+  // --- FITUR RESET/REDEEM KUIS BARU ---
   const handleResetQuiz = () => {
     setSelectedAnswers({});
     setScore(null);
     setShowAnswers(false);
+    
     localStorage.removeItem(localStorageKey_Answers);
     localStorage.removeItem(localStorageKey_Score);
+    localStorage.removeItem(localStorageKey_Questions);
+    
+    loadNewQuiz(null); // Muat 10 soal acak yang baru
   };
-  // ------------------------------------
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
@@ -169,14 +135,14 @@ export default function MateriMtk5Bab4Page() {
             Pusat Akademik Siswa
           </h1>
           <h2 className="text-2xl md:text-3xl font-semibold text-slate-700 text-center mb-10 md:mb-12">
-            Materi Bab 4: Kekongruenan dan Sudut Bangun Datar
+            Materi Bab 4: Kekongruenan dan sudut bangun datar
           </h2>
 
           <div className="max-w-4xl mx-auto">
             <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
               Video Pembelajaran
             </h3>
-
+            
             <div className="aspect-video w-full mb-10 rounded-lg shadow-xl overflow-hidden border border-gray-200">
               {loadingVideo ? (
                 <div className="flex justify-center items-center h-full text-slate-500">
@@ -197,116 +163,113 @@ export default function MateriMtk5Bab4Page() {
                 </div>
               )}
             </div>
-            
+
             <h3 className="text-xl md:text-2xl font-semibold text-slate-800 mb-4">
-              Uji Pemahaman (10 Soal)
+              Uji Pemahaman 
             </h3>
             
             <form 
               onSubmit={handleSubmit}
               className="p-4 md:p-6 border rounded-lg shadow-lg bg-white"
             >
-              {quizQuestions.map((q, index) => (
-                <div key={index} className="mb-6 pb-4 border-b last:border-b-0">
-                  <p className="font-semibold text-lg mb-3 text-gray-900">
-                    {q.question}
-                  </p>
-                  <div className="space-y-2">
-                    {q.options.map((option) => {
-                      const isCorrect = q.correctAnswer === option;
-                      const isSelected = selectedAnswers[index] === option;
-                      let labelClass = "text-gray-900"; 
-                      
-                      if (showAnswers) {
-                        if (isCorrect) labelClass = "text-green-600 font-bold";
-                        if (isSelected && !isCorrect) labelClass = "text-red-600 line-through";
-                      }
-                      return (
-                        <div key={option} className="flex items-center">
-                          <input
-                            type="radio"
-                            id={`q${index}_${option}`}
-                            name={`question_${index}`}
-                            value={option}
-                            checked={isSelected}
-                            onChange={() =>
-                              handleAnswerChange(index, option)
-                            }
-                            disabled={score !== null}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                          />
-                          <label
-                            htmlFor={`q${index}_${option}`}
-                            className={`ml-3 block text-base font-medium ${labelClass}`}
-                          >
-                            {option}
-                            {showAnswers && isCorrect && (
-                              <BiCheckCircle className="inline ml-2 text-green-600" />
-                            )}
-                            {showAnswers &&
-                              isSelected &&
-                              !isCorrect && (
-                                <BiXCircle className="inline ml-2 text-red-600" />
-                              )}
-                          </label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+              {displayedQuestions.map((q, index) => {
+                const isUserAnswered = selectedAnswers[index] !== undefined;
 
+                return (
+                  <div key={index} className="mb-6 pb-4 border-b last:border-b-0">
+                    <p className="font-semibold text-lg mb-3 text-gray-900">
+                      {index + 1}. {q.question.replace(/^\d+\. /, '')}
+                    </p>
+                    <div className="space-y-2">
+                      {q.options.map((option) => {
+                        const isOptionCorrect = q.correctAnswer === option;
+                        const isOptionSelected = selectedAnswers[index] === option;
+                        let labelClass = "text-gray-900"; 
+                        
+                        if (showAnswers && isUserAnswered) {
+                          if (isOptionCorrect) labelClass = "text-green-600 font-bold";
+                          if (isOptionSelected && !isOptionCorrect) labelClass = "text-red-600 line-through";
+                        }
+
+                        return (
+                          <div key={option} className="flex items-center">
+                            <input
+                              type="radio"
+                              id={`q${index}_${option}`}
+                              name={`question_${index}`}
+                              value={option}
+                              checked={isOptionSelected}
+                              onChange={() => handleAnswerChange(index, option)}
+                              disabled={score !== null} 
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <label 
+                              htmlFor={`q${index}_${option}`}
+                              className={`ml-3 block text-base font-medium ${labelClass}`}
+                            >
+                              {option}
+                              {showAnswers && isOptionCorrect && <BiCheckCircle className="inline ml-2 text-green-600" />}
+                              {showAnswers && isOptionSelected && !isOptionCorrect && <BiXCircle className="inline ml-2 text-red-600" />}
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              
               <div className="mt-6 flex flex-wrap items-center gap-4">
                 {score === null && (
-                  <button
-                    type="submit"
+                  <button 
+                    type="submit" 
                     className="px-6 py-2 border border-transparent bg-blue-600 text-white rounded-md font-semibold shadow-sm hover:bg-blue-700 transition-all"
+                    disabled={Object.keys(selectedAnswers).length < DISPLAY_COUNT}
                   >
                     Kirim Jawaban
                   </button>
                 )}
-
+                
                 {score !== null && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setShowAnswers(!showAnswers)}
-                      className="px-6 py-2 border border-slate-300 text-slate-700 rounded-md font-semibold hover:bg-slate-50 transition-all"
-                    >
-                      {showAnswers
-                        ? "Sembunyikan Jawaban"
-                        : "Lihat Kunci Jawaban"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleResetQuiz}
-                      className="px-6 py-2 border border-transparent text-red-600 rounded-md font-semibold hover:bg-red-50 transition-all"
-                    >
-                      Ulangi Kuis
-                    </button>
-                  </>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAnswers(!showAnswers)}
+                    className="px-6 py-2 border border-slate-300 text-slate-700 rounded-md font-semibold hover:bg-slate-50 transition-all"
+                  >
+                    {showAnswers ? "Sembunyikan Jawaban" : "Lihat Kunci Jawaban"}
+                  </button>
+                )}
+                
+                {score !== null && (
+                  <button 
+                    type="button" 
+                    onClick={handleResetQuiz}
+                    className="px-6 py-2 border border-transparent text-red-600 rounded-md font-semibold hover:bg-red-50 transition-all"
+                  >
+                    Ulangi Kuis 
+                  </button>
                 )}
               </div>
 
               {score !== null && (
                 <div className="mt-6 p-4 rounded-md bg-blue-50 border border-blue-200">
                   <p className="font-semibold text-blue-800 text-lg">
-                    Skor Anda: {score} / {quizQuestions.length}
+                    Skor Anda (tersimpan di perangkat ini): {score} / {displayedQuestions.length}
                   </p>
                 </div>
               )}
             </form>
 
             <div className="text-center mt-8 md:mt-12">
-              <Link
-                href="/akademik/kelas-5/matematika"
+              <Link 
+                href="/akademik/kelas-5/matematika" 
                 className="inline-flex items-center px-6 py-2 border border-slate-300 text-slate-600 rounded-full font-semibold hover:bg-slate-50 transition-all duration-200"
               >
                 <BiArrowBack className="mr-2" />
                 Kembali ke Pilih Bab
               </Link>
             </div>
+            
           </div>
         </div>
       </main>
@@ -314,7 +277,3 @@ export default function MateriMtk5Bab4Page() {
     </div>
   );
 }
-
-
-
-            
